@@ -44,13 +44,13 @@ mod oskey {
         fibersapi::FlsAlloc(dtor)
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) unsafe fn set(key: Key, value: *mut c_void) {
         let r = fibersapi::FlsSetValue(key, value);
         debug_assert_ne!(r, 0);
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) unsafe fn get(key: Key) -> *mut c_void {
         fibersapi::FlsGetValue(key)
     }
@@ -80,13 +80,13 @@ mod oskey {
         key.assume_init()
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) unsafe fn set(key: Key, value: *mut c_void) {
         let r = libc::pthread_setspecific(key, value);
         debug_assert_eq!(r, 0);
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) unsafe fn get(key: Key) -> *mut c_void {
         libc::pthread_getspecific(key)
     }
@@ -319,6 +319,7 @@ impl<T> ThreadLocal<T> {
     /// This function can also `panic!()` if the storage is uninitialized and there
     /// is not enough available memory to allocate a new thread local storage for
     /// the current thread, or if the OS primitives fail.
+    #[inline(always)]
     pub fn with<R, F: FnOnce(&T) -> R>(&self, f: F) -> R {
         self.try_with(f)
             .expect("cannot access a TLS value during or after it is destroyed")
@@ -345,6 +346,7 @@ impl<T> ThreadLocal<T> {
     /// This function can also `panic!()` if the storage is uninitialized and there
     /// is not enough available memory to allocate a new thread local storage for
     /// the current thread, or if the OS primitives fail.
+    #[inline]
     pub fn try_with<R, F: FnOnce(&T) -> R>(&self, f: F) -> Result<R, AccessError> {
         let ptr = unsafe { oskey::get(self.key) as *mut ThreadLocalValue<T> };
         let value = NonNull::new(ptr).unwrap_or_else(|| unsafe {
